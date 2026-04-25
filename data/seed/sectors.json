@@ -1,0 +1,12 @@
+{
+  "Semiconductors": {
+    "description": "Companies that design, manufacture, or supply equipment/materials for integrated circuits.",
+    "sub_industries": [
+      "Semiconductors",
+      "Semiconductor Equipment",
+      "Semiconductor Foundries",
+      "Semiconductor Materials",
+      "Memory"
+    ]
+  }
+}

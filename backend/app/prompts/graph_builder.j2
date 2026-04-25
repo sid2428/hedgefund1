@@ -1,0 +1,31 @@
+You are an analyst mapping the relationships between companies disclosed in SEC filings.
+
+Source company: {{ company_name }} ({{ ticker }})
+Filing section: {{ section_name }}
+
+Filing text:
+<filing_text>
+{{ filing_text }}
+</filing_text>
+
+Identify every named relationship between {{ company_name }} and another publicly traded
+company that you can find in the text. Only include relationships that are explicitly stated
+or that follow unambiguously from the wording. Do NOT infer relationships from your own
+market knowledge.
+
+Allowed relationship_type values:
+- "customer"      - the named entity is a CUSTOMER of {{ ticker }}
+- "supplier"      - the named entity is a SUPPLIER to {{ ticker }}
+- "competitor"    - the named entity is a COMPETITOR of {{ ticker }}
+- "partner"       - strategic partnership / joint venture
+- "subsidiary"    - subsidiary or controlled entity
+- "geographic_peer" - same regional exposure (use sparingly)
+
+Output requirements (CRITICAL):
+- Return ONLY a JSON array. No prose.
+- Each item: { "named_entity": "...", "relationship_type": "...", "evidence_text": "verbatim
+  quote", "confidence": 0.0-1.0 }
+- `evidence_text` must be a verbatim quote (<= 250 chars).
+- If no relationships are present, return [].
+
+Now produce the JSON array.

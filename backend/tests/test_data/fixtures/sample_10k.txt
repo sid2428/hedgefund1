@@ -1,0 +1,30 @@
+ITEM 1A. RISK FACTORS
+
+Customer Concentration. A significant portion of our revenue is derived from a small number
+of large customers. In fiscal 2024, two customers each accounted for more than 10% of
+total revenue. Our largest customer, Apple Inc., represented approximately 22% of fiscal
+2024 revenue, and our second-largest customer represented approximately 14%. The loss
+of, or a significant reduction in orders from, any of these customers could have a material
+adverse effect on our business.
+
+Supply Chain Concentration. We rely on Taiwan Semiconductor Manufacturing Company
+("TSMC") as our primary foundry partner for the production of substantially all of our
+advanced GPUs and AI accelerators. We do not have a long-term volume guarantee
+agreement with TSMC, and any disruption to TSMC's operations or capacity could
+materially affect our ability to deliver products to customers. We are exploring
+diversification of foundry partners but expect TSMC to remain our largest supplier through
+fiscal 2025.
+
+Geographic Exposure. Approximately 30% of our fiscal 2024 revenue was generated from
+customers in China. Continued export controls and trade restrictions imposed by the U.S.
+government on advanced semiconductors sold into China could materially reduce demand.
+
+ITEM 7. MANAGEMENT'S DISCUSSION AND ANALYSIS OF FINANCIAL CONDITION AND
+RESULTS OF OPERATIONS
+
+Outlook. While demand for AI-accelerated computing remains robust, we are observing
+elongated sales cycles in certain end markets and we expect demand to remain volatile
+through the first quarter as macro conditions evolve. We are taking a more cautious view
+of the remainder of fiscal 2025 than we communicated last quarter. Capital expenditures
+for fiscal 2025 are expected to be in the range of $4.0 billion to $4.5 billion, an increase
+from the $3.4 billion incurred in fiscal 2024 to support data center capacity expansion.

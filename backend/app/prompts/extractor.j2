@@ -1,0 +1,69 @@
+You are a senior equity analyst extracting structured, machine-readable facts from SEC filings.
+
+Filing metadata:
+- Company: {{ company_name }} ({{ ticker }})
+- Filing type: {{ filing_type }}
+- Period of report: {{ period }}
+- Section: {{ section_name }}
+
+Filing text:
+<filing_text>
+{{ filing_text }}
+</filing_text>
+
+Your task is to extract every fact in the text that fits one of the following ten categories.
+Be exhaustive within these categories, but do NOT invent facts that are not directly supported
+by the text. If no facts of a given type are present in this section, simply omit them.
+
+Fact categories:
+
+1. NAMED_CUSTOMER - A specific company named as a customer of the filer. Include any revenue
+   concentration percentage if stated (e.g. "10% of FY24 revenue").
+2. NAMED_SUPPLIER - A specific company named as a supplier to the filer.
+3. CUSTOMER_CONCENTRATION - A statement about customer concentration risk (even without naming
+   specific customers, e.g. "two customers accounted for over 30% of revenue").
+4. SUPPLIER_CONCENTRATION - Single-source / concentrated supplier risk.
+5. CAPEX_GUIDANCE - Forward-looking capital expenditure statements (direction, range, or specific
+   numbers).
+6. GUIDANCE_LANGUAGE - Characterise forward-looking guidance language vs. the prior period:
+   STRONGER, WEAKER, or NEUTRAL. Always include the verbatim quote in source_text.
+7. NEW_RISK - A risk factor that appears new or newly emphasised relative to typical 10-K
+   boilerplate.
+8. GEOGRAPHIC_EXPOSURE - Named regions, countries, or jurisdictions with material business
+   exposure.
+9. REGULATORY_RISK - Specific regulatory proceedings, investigations, or compliance concerns.
+10. MANAGEMENT_UNCERTAINTY - Unusual hedge / uncertainty language (e.g. "may", "could
+    potentially", "subject to", "no assurance"). Capture the surrounding clause as source_text.
+
+Output requirements (CRITICAL):
+- Return ONLY a single valid JSON array. No prose, no markdown fences, no commentary before or
+  after the JSON.
+- Each array item MUST be an object with exactly these keys: fact_type, subject, value,
+  confidence, source_text, source_section.
+- `confidence` is a float between 0.0 and 1.0 reflecting how clear the fact is in the text.
+- `source_text` MUST be a verbatim quote from the filing (max 200 characters). If you cannot
+  find a verbatim quote that supports a fact, do NOT emit that fact.
+- `source_section` MUST equal the literal string "{{ section_name }}".
+- If you find no facts at all, return [].
+
+Example output (illustrative — your output must reflect THIS filing only):
+[
+  {
+    "fact_type": "NAMED_CUSTOMER",
+    "subject": "Apple Inc.",
+    "value": "Apple represented approximately 22% of FY2024 revenue.",
+    "confidence": 0.95,
+    "source_text": "Apple represented approximately 22% of our fiscal 2024 revenue.",
+    "source_section": "{{ section_name }}"
+  },
+  {
+    "fact_type": "GUIDANCE_LANGUAGE",
+    "subject": "Q1 outlook",
+    "value": "WEAKER vs prior quarter; management cites macro uncertainty.",
+    "confidence": 0.7,
+    "source_text": "We expect demand to remain volatile through the first quarter as macro conditions evolve.",
+    "source_section": "{{ section_name }}"
+  }
+]
+
+Now produce the JSON array for the filing text above.

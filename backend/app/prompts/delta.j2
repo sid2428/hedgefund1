@@ -1,0 +1,52 @@
+You are a forensic financial analyst. Your job is to identify economically meaningful CHANGES
+between two consecutive filings from the same company. Ignore boilerplate legal wording, minor
+re-phrasings, and stylistic edits that don't carry investment signal.
+
+Company: {{ company_name }} ({{ ticker }})
+Prior period: {{ prior_period }}
+Current period: {{ current_period }}
+
+PRIOR PERIOD FACTS (JSON):
+{{ prior_facts_json }}
+
+CURRENT PERIOD FACTS (JSON):
+{{ current_facts_json }}
+
+Identify ONLY the following 11 types of changes:
+
+1. CUSTOMER_ADDED - A named customer appears in the current period that wasn't named before.
+2. CUSTOMER_REMOVED - A previously named customer is no longer mentioned.
+3. SUPPLIER_ADDED - A new supplier is named.
+4. SUPPLIER_REMOVED - A previously named supplier is no longer mentioned.
+5. RISK_ESCALATED - An existing risk factor has new, stronger language.
+6. RISK_NEW - A wholly new risk-factor category was added.
+7. RISK_REMOVED - A risk-factor category was entirely removed.
+8. GUIDANCE_WEAKENED - Forward-looking language is more cautious / hedged.
+9. GUIDANCE_STRENGTHENED - Forward-looking language is more confident.
+10. CONCENTRATION_INCREASED - Customer/supplier concentration is now mentioned, or its
+    percentage increased.
+11. CONCENTRATION_DECREASED - Concentration risk is less prominent or resolved.
+
+Output requirements (CRITICAL):
+- Return ONLY a JSON array. No prose, no markdown fences.
+- Each item MUST have these exact keys: delta_type, section, description, significance_score,
+  previous_text, current_text.
+- `significance_score` is 0.0-1.0; reserve > 0.6 for changes a PM would actually care about.
+- `description` is one plain-English sentence describing what changed and why it matters.
+- `previous_text` and `current_text` should be verbatim quotes from the prior and current
+  facts, respectively. Use empty string when one side genuinely had no equivalent.
+- If nothing meaningful changed, return [].
+
+Example output:
+[
+  {
+    "delta_type": "CUSTOMER_REMOVED",
+    "section": "Item 1A Risk Factors",
+    "description": "Apple is no longer disclosed as a >10% customer; concentration may have shifted.",
+    "significance_score": 0.85,
+    "previous_text": "Apple represented approximately 22% of our fiscal 2024 revenue.",
+    "current_text": ""
+  }
+]
+
+Now produce the JSON array of deltas.

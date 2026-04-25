@@ -1,0 +1,22 @@
+[
+  {"ticker": "NVDA", "cik": "1045810", "name": "NVIDIA Corporation", "sector": "Semiconductors", "industry": "Semiconductors"},
+  {"ticker": "TSM",  "cik": "1046179", "name": "Taiwan Semiconductor Manufacturing", "sector": "Semiconductors", "industry": "Semiconductor Foundries"},
+  {"ticker": "AVGO", "cik": "1054374", "name": "Broadcom Inc", "sector": "Semiconductors", "industry": "Semiconductors"},
+  {"ticker": "AMD",  "cik": "2488",    "name": "Advanced Micro Devices", "sector": "Semiconductors", "industry": "Semiconductors"},
+  {"ticker": "INTC", "cik": "50863",   "name": "Intel Corporation", "sector": "Semiconductors", "industry": "Semiconductors"},
+  {"ticker": "QCOM", "cik": "804328",  "name": "Qualcomm Incorporated", "sector": "Semiconductors", "industry": "Semiconductors"},
+  {"ticker": "MU",   "cik": "723125",  "name": "Micron Technology", "sector": "Semiconductors", "industry": "Memory"},
+  {"ticker": "AMAT", "cik": "6951",    "name": "Applied Materials", "sector": "Semiconductors", "industry": "Semiconductor Equipment"},
+  {"ticker": "LRCX", "cik": "707549",  "name": "Lam Research", "sector": "Semiconductors", "industry": "Semiconductor Equipment"},
+  {"ticker": "KLAC", "cik": "319201",  "name": "KLA Corporation", "sector": "Semiconductors", "industry": "Semiconductor Equipment"},
+  {"ticker": "ASML", "cik": "937966",  "name": "ASML Holding", "sector": "Semiconductors", "industry": "Semiconductor Equipment"},
+  {"ticker": "TXN",  "cik": "97476",   "name": "Texas Instruments", "sector": "Semiconductors", "industry": "Semiconductors"},
+  {"ticker": "ADI",  "cik": "6281",    "name": "Analog Devices", "sector": "Semiconductors", "industry": "Semiconductors"},
+  {"ticker": "MRVL", "cik": "1835632", "name": "Marvell Technology", "sector": "Semiconductors", "industry": "Semiconductors"},
+  {"ticker": "ON",   "cik": "1097864", "name": "ON Semiconductor", "sector": "Semiconductors", "industry": "Semiconductors"},
+  {"ticker": "WOLF", "cik": "895419",  "name": "Wolfspeed", "sector": "Semiconductors", "industry": "Semiconductors"},
+  {"ticker": "SWKS", "cik": "4127",    "name": "Skyworks Solutions", "sector": "Semiconductors", "industry": "Semiconductors"},
+  {"ticker": "QRVO", "cik": "1604778", "name": "Qorvo", "sector": "Semiconductors", "industry": "Semiconductors"},
+  {"ticker": "ENTG", "cik": "1101302", "name": "Entegris", "sector": "Semiconductors", "industry": "Semiconductor Materials"},
+  {"ticker": "ACLS", "cik": "1113232", "name": "Axcelis Technologies", "sector": "Semiconductors", "industry": "Semiconductor Equipment"}
+]
