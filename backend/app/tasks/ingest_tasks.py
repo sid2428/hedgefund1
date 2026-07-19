@@ -7,8 +7,10 @@ from datetime import date
 from typing import Any
 
 from app.data.edgar import EDGARClient, list_recent_filings
+from app.data.xbrl import parse_company_facts
 from app.db.repositories.company_repo import CompanyRepository
 from app.db.repositories.filing_repo import FilingRepository
+from app.db.repositories.financial_fact_repo import FinancialFactRepository
 from app.db.session import AsyncSessionLocal
 from app.tasks.celery_app import celery
 from app.utils.logger import get_logger
@@ -79,6 +81,33 @@ async def _ingest_async(
                 new_filing_ids.append(str(filing.id))
                 fetched += 1
 
+            # Structured financials, read straight from XBRL rather than
+            # inferred from the document text. One extra request per company
+            # returns every value the filer has ever tagged.
+            #
+            # Deliberately independent of the loop above: companyfacts failing
+            # must not discard filings that were fetched successfully, and a
+            # company with no XBRL history is not an ingestion error.
+            xbrl_inserted = 0
+            try:
+                payload = await edgar.get_company_facts(company.cik)
+            except Exception as e:  # noqa: BLE001
+                log.warning("edgar_companyfacts_failed", ticker=ticker, error=str(e))
+            else:
+                parsed = parse_company_facts(payload)
+                xbrl_inserted = await FinancialFactRepository(session).bulk_upsert(
+                    company.id, parsed
+                )
+                log.info(
+                    "xbrl_facts_ingested",
+                    ticker=ticker,
+                    parsed=len(parsed),
+                    inserted=xbrl_inserted,
+                    # Re-reading the full payload each run is expected; most
+                    # rows already exist and are skipped on conflict.
+                    already_known=len(parsed) - xbrl_inserted,
+                )
+
             await session.commit()
 
     # Kick off agent pipeline for each new filing (separate queue).
@@ -89,6 +118,7 @@ async def _ingest_async(
         "ticker": ticker,
         "filings_fetched": fetched,
         "new_filing_ids": new_filing_ids,
+        "xbrl_facts_inserted": xbrl_inserted,
     }
 
 
