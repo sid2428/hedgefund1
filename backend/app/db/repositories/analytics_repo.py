@@ -24,7 +24,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import date
 
-from sqlalchemy import Float, and_, case, cast, func, select
+from sqlalchemy import Date, Float, and_, case, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import FinancialFact
@@ -88,6 +88,7 @@ class AnalyticsRepository:
         company_id: uuid.UUID,
         *,
         as_of: date,
+        name: str,
         concept: str | None = None,
         unit: str | None = None,
         fiscal_period: str | None = None,
@@ -102,6 +103,12 @@ class AnalyticsRepository:
         Doing this in SQL rather than after the fact means a caller cannot
         forget it, and the database never has to return the rows being
         discarded.
+
+        `name` must be unique within a single statement. Queries that join two
+        of these together — a ratio, or the balance-sheet identity — would
+        otherwise produce several unrelated CTEs sharing one name, which is a
+        compile error rather than a silent wrong answer, but a hard failure all
+        the same.
         """
         conditions = [
             FinancialFact.company_id == company_id,
@@ -140,13 +147,13 @@ class AnalyticsRepository:
                 version,
             )
             .where(and_(*conditions))
-            .cte("ranked")
+            .cte(f"ranked_{name}")
         )
 
         return (
             select(ranked)
             .where(ranked.c.version == 1)
-            .cte("as_reported")
+            .cte(f"as_reported_{name}")
         )
 
     # ----- growth ---------------------------------------------------------
@@ -172,14 +179,24 @@ class AnalyticsRepository:
         base = self._as_reported_cte(
             company_id,
             as_of=as_of,
+            name="growth",
             concept=concept,
             unit=unit,
             fiscal_period=fiscal_period,
         )
 
-        prior_value = func.lag(base.c.value).over(order_by=base.c.period_end).label("prior_value")
+        # `type_` is required on both. A window function is opaque to the
+        # dialect's result processing, so without it SQLite hands back the
+        # lagged date as a raw string rather than a `date`.
+        prior_value = (
+            func.lag(base.c.value, type_=Float)
+            .over(order_by=base.c.period_end)
+            .label("prior_value")
+        )
         prior_end = (
-            func.lag(base.c.period_end).over(order_by=base.c.period_end).label("prior_period_end")
+            func.lag(base.c.period_end, type_=Date)
+            .over(order_by=base.c.period_end)
+            .label("prior_period_end")
         )
 
         windowed = select(base, prior_value, prior_end).cte("windowed")
@@ -234,10 +251,12 @@ class AnalyticsRepository:
         cross-match — silently dividing a quarter's earnings by a year's revenue.
         """
         num = self._as_reported_cte(
-            company_id, as_of=as_of, concept=numerator, unit=unit, fiscal_period=fiscal_period
+            company_id, as_of=as_of, name="num",
+            concept=numerator, unit=unit, fiscal_period=fiscal_period,
         )
         den = self._as_reported_cte(
-            company_id, as_of=as_of, concept=denominator, unit=unit, fiscal_period=fiscal_period
+            company_id, as_of=as_of, name="den",
+            concept=denominator, unit=unit, fiscal_period=fiscal_period,
         )
 
         stmt = (
@@ -315,7 +334,7 @@ class AnalyticsRepository:
                 total,
             )
             .where(and_(*base_conditions))
-            .cte("ranked")
+            .cte("ranked_restatements")
         )
 
         first = select(ranked).where(ranked.c.asc_rank == 1).cte("first_reported")
@@ -430,12 +449,14 @@ class AnalyticsRepository:
 
         Returns `(period_end, assets, liabilities_plus_equity, difference, ok)`.
         """
-        assets = self._as_reported_cte(company_id, as_of=as_of, concept="total_assets")
+        assets = self._as_reported_cte(
+            company_id, as_of=as_of, name="assets", concept="total_assets"
+        )
         liabilities = self._as_reported_cte(
-            company_id, as_of=as_of, concept="total_liabilities"
+            company_id, as_of=as_of, name="liab", concept="total_liabilities"
         )
         equity = self._as_reported_cte(
-            company_id, as_of=as_of, concept="stockholders_equity"
+            company_id, as_of=as_of, name="equity", concept="stockholders_equity"
         )
 
         rhs = (cast(liabilities.c.value, Float) + equity.c.value).label("rhs")
