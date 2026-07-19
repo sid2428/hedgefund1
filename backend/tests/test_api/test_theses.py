@@ -12,7 +12,7 @@ from httpx import ASGITransport, AsyncClient
 # conftest.py sets DATABASE_URL=sqlite+aiosqlite for the whole test process,
 # so the app uses an in-memory DB when imported here.
 from app.db.models import Company, Thesis  # noqa: E402
-from app.db.session import AsyncSessionLocal, create_all_tables, engine  # noqa: E402
+from app.db.session import AsyncSessionLocal, create_all_tables  # noqa: E402
 from app.main import app  # noqa: E402
 
 
