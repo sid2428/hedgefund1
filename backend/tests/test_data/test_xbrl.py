@@ -191,9 +191,29 @@ def test_point_in_time_pipeline_composes():
     """as-of then as-reported is the combination a backtest should use."""
     facts = resolve_concept(parse_company_facts(PAYLOAD), "revenue")
     result = as_reported(known_as_of(facts, date(2024, 3, 1)))
-    by_period = {f.period_end: f.value for f in result}
+
+    # Narrow to annual figures before keying on the end date. A fiscal year and
+    # its final quarter end on the same day, so `period_end` alone does not
+    # identify a period — the pair (start, end) does.
+    by_period = {f.period_end: f.value for f in annual_facts(result)}
+
     assert by_period[date(2023, 1, 29)] == 26974000000  # original, not restated
     assert by_period[date(2024, 1, 28)] == 60922000000
+
+
+def test_annual_and_quarterly_periods_sharing_an_end_date_both_survive():
+    """A fiscal year and its Q4 end on the same day and must not collapse.
+
+    This is the failure mode the composition test above hid: deduplication keys
+    on (start, end), so both are retained. Any consumer keying on end date alone
+    will silently drop one of them.
+    """
+    facts = as_reported(resolve_concept(parse_company_facts(PAYLOAD), "revenue"))
+    same_end = [f for f in facts if f.period_end == date(2024, 1, 28)]
+
+    assert len(same_end) == 2
+    assert {f.duration_days for f in same_end} == {363, 90}
+    assert {f.value for f in same_end} == {60922000000, 22103000000}
 
 
 # --- concept resolution -----------------------------------------------------
