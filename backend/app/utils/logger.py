@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from typing import Any
 
 import structlog
 
@@ -23,12 +24,16 @@ def configure_logging() -> None:
         structlog.stdlib.add_log_level,
         timestamper,
         structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
     ]
 
+    renderer: Any
     if settings.ENVIRONMENT == "development":
+        # ConsoleRenderer formats exceptions itself and warns if handed
+        # already-formatted output, so `format_exc_info` is added only for the
+        # JSON path, where the traceback does need flattening to a string.
         renderer = structlog.dev.ConsoleRenderer(colors=False)
     else:
+        shared_processors.append(structlog.processors.format_exc_info)
         renderer = structlog.processors.JSONRenderer()
 
     structlog.configure(
@@ -37,7 +42,12 @@ def configure_logging() -> None:
             getattr(logging, settings.LOG_LEVEL, logging.INFO)
         ),
         context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
+        # Must be the stdlib factory, not PrintLoggerFactory: the
+        # `add_logger_name` processor above reads `.name` off the underlying
+        # logger, and PrintLogger has no such attribute — every log call would
+        # raise AttributeError. Routing through stdlib also makes the
+        # basicConfig and library-quieting below actually apply.
+        logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
 
