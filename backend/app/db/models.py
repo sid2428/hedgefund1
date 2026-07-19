@@ -316,13 +316,39 @@ class FinancialFact(Base):
 # company_relationships (graph edges)
 # ---------------------------------------------------------------------------
 class CompanyRelationship(Base):
+    """A directed edge between two companies, valid over a period of time.
+
+    Edges are **temporal**. A supplier relationship disclosed in a 2022 10-K and
+    absent from the 2024 one did not cease to have existed — it ceased to be
+    asserted, on a knowable date. Modelling that as an update would destroy the
+    only record that the relationship was ever claimed, and would make any
+    historical graph query silently wrong.
+
+    So edges are closed rather than deleted: `known_until` is set on the row and
+    a new row opens if the relationship is later re-asserted. A graph as of date
+    D is every row where `known_from <= D` and `known_until` is either null or
+    after D. This is the edge-level counterpart to the bitemporality in
+    `financial_facts`, and it is what makes `GET /graph?as_of=` truthful rather
+    than decorative.
+    """
+
     __tablename__ = "company_relationships"
     __table_args__ = (
+        # `known_from` participates in identity: the same relationship may be
+        # asserted, closed, and asserted again by a later filing.
         UniqueConstraint(
             "source_company_id",
             "target_company_id",
             "relationship_type",
+            "known_from",
             name="uq_company_rel",
+        ),
+        # Serves the dominant traversal: open edges for a node as of a date.
+        Index(
+            "ix_company_rel_temporal",
+            "source_company_id",
+            "known_from",
+            "known_until",
         ),
     )
 
@@ -339,9 +365,33 @@ class CompanyRelationship(Base):
         _GUID(), ForeignKey("filings.id", ondelete="SET NULL")
     )
     evidence_text: Mapped[str | None] = mapped_column(Text)
+
+    known_from: Mapped[date] = mapped_column(
+        Date, nullable=False, index=True, default=lambda: date.today()
+    )
+    """Filing date of the document that asserted this edge.
+
+    Callers should pass the filing date explicitly. The default exists so that
+    a writer which does not yet supply one degrades to "known as of now" rather
+    than failing the insert — wrong by at most the ingestion lag, instead of
+    losing the edge entirely.
+    """
+
+    known_until: Mapped[date | None] = mapped_column(Date, index=True)
+    """Filing date of the document in which the assertion disappeared.
+
+    Null means still open. Half-open interval: an edge is live on date D when
+    `known_from <= D < known_until`, so a close and a re-open on the same day do
+    not both match.
+    """
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+    @property
+    def is_open(self) -> bool:
+        return self.known_until is None
 
 
 # ---------------------------------------------------------------------------
