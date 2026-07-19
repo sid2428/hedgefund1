@@ -67,8 +67,13 @@ def test_quality_gate_rejects_missing_invalidation():
 
 
 @pytest.mark.asyncio
-async def test_connector_returns_none_when_rejected(test_company):
-    """Rejection envelope from the model -> agent returns None (no thesis)."""
+async def test_connector_returns_none_when_rejected(test_company, async_session):
+    """Rejection envelope from the model -> agent returns None (no thesis).
+
+    A real session is required. The agent loads recent facts for each connected
+    company in order to build the prompt, so the database is necessarily touched
+    before the model can return anything to reject.
+    """
     agent = ConnectorAgent()
     delta = FilingDelta(
         id=uuid.uuid4(),
@@ -100,6 +105,6 @@ async def test_connector_returns_none_when_rejected(test_company):
                     "degree": 1,
                 }
             ],
-            session=None,  # noqa: ARG003 - hits no DB on early reject
+            session=async_session,
         )
     assert result is None

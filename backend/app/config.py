@@ -58,7 +58,10 @@ class Settings(BaseSettings):
     )
     EDGAR_BASE_URL: str = "https://data.sec.gov"
     EDGAR_SEARCH_URL: str = "https://efts.sec.gov/LATEST/search-index"
-    EDGAR_RATE_LIMIT_RPS: float = 10.0
+    # SEC enforces 10 req/sec per IP across all EDGAR domains; breaching it
+    # returns 403 and blocks the IP for roughly 10 minutes. We run at 8 to keep
+    # headroom for retries and any concurrent process sharing the address.
+    EDGAR_RATE_LIMIT_RPS: float = 8.0
 
     # --- Pipeline tuning ---
     EXTRACTOR_MAX_TOKENS_PER_CHUNK: int = 6000

@@ -6,7 +6,7 @@ Uses `JSON` type which maps to JSONB on Postgres and JSON on SQLite (for tests).
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any
 
 from sqlalchemy import (
@@ -118,14 +118,32 @@ class Base(DeclarativeBase):
     """Declarative base for all ORM models."""
 
 
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 class TimestampMixin:
+    # Both columns keep a `server_default` so rows written outside the ORM
+    # (migrations, raw SQL, bulk loads) still get timestamps, and add a
+    # Python-side default so the ORM knows the value it wrote.
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True),
+        default=_utcnow,
+        server_default=func.now(),
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
+        default=_utcnow,
         server_default=func.now(),
-        onupdate=func.now(),
+        # Python-side, deliberately not `onupdate=func.now()`. A SQL-side
+        # onupdate computes the value in the database, so the ORM does not know
+        # what was written and expires the attribute. The next read triggers a
+        # lazy refresh — synchronous IO from an async context, which raises
+        # MissingGreenlet the moment anything serialises the object after an
+        # update. Computing it here keeps the instance consistent without a
+        # round trip.
+        onupdate=_utcnow,
         nullable=False,
     )
 
