@@ -16,6 +16,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -223,6 +224,92 @@ class ExtractedFact(Base):
     filing: Mapped[Filing] = relationship(
         "Filing", back_populates="facts", foreign_keys=[filing_id]
     )
+
+
+# ---------------------------------------------------------------------------
+# financial_facts (XBRL, bitemporal)
+# ---------------------------------------------------------------------------
+class FinancialFact(Base):
+    """A structured financial value as reported in XBRL.
+
+    Distinct from `ExtractedFact`, which holds narrative claims pulled out by a
+    language model. These values are read directly from the SEC `companyfacts`
+    endpoint: they are what the company filed, so there is nothing to infer and
+    nothing to hallucinate.
+
+    The table is **bitemporal**, and that is the point of it:
+
+    * `period_end` (with `period_start`) is *valid time* — the period the number
+      describes.
+    * `filed_date` is *transaction time* — when the number became public.
+
+    Restatements are stored as additional rows rather than updates, so a period
+    reported twice keeps both values. Queries reconstructing a past view filter
+    on `filed_date`; filtering on `period_end` instead would admit corrections
+    that nobody had at the time, which is the mechanism behind lookahead bias.
+    Rows are therefore never updated in place.
+    """
+
+    __tablename__ = "financial_facts"
+    __table_args__ = (
+        # A given filing reports a given period once. Two rows differing only by
+        # accession number are an original and a restatement, and both are kept.
+        UniqueConstraint(
+            "company_id",
+            "concept",
+            "unit",
+            "period_start",
+            "period_end",
+            "accession_number",
+            name="uq_financial_facts_identity",
+        ),
+        # The dominant access pattern: one company's series for one concept,
+        # restricted to what was known at a point in time.
+        Index(
+            "ix_financial_facts_lookup",
+            "company_id",
+            "concept",
+            "filed_date",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(_GUID(), primary_key=True, default=_uuid)
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        _GUID(), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    concept: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    """Canonical name, e.g. `revenue`. See app.data.xbrl.CONCEPT_TAGS."""
+
+    tag: Mapped[str] = mapped_column(String(120), nullable=False)
+    """Originating us-gaap/dei tag, kept so a value can be traced to its source."""
+
+    taxonomy: Mapped[str] = mapped_column(String(20), nullable=False)
+    unit: Mapped[str] = mapped_column(String(30), nullable=False)
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+
+    # Instant facts (balance-sheet items) have no true start date. Rather than
+    # storing NULL, `period_start` is set equal to `period_end` and `is_instant`
+    # records the distinction. NULLs are treated as distinct by UNIQUE
+    # constraints on both Postgres and SQLite, which would let duplicate instant
+    # facts through the constraint above.
+    period_start: Mapped[date] = mapped_column(Date, nullable=False)
+    period_end: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    is_instant: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    filed_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    """Transaction time. Every as-of query filters on this column."""
+
+    accession_number: Mapped[str] = mapped_column(String(25), nullable=False, index=True)
+    form: Mapped[str | None] = mapped_column(String(20))
+    fiscal_year: Mapped[int | None] = mapped_column(Integer)
+    fiscal_period: Mapped[str | None] = mapped_column(String(10))
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    company: Mapped[Company] = relationship("Company", foreign_keys=[company_id])
 
 
 # ---------------------------------------------------------------------------
